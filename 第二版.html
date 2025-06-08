@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>每日记账</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #f9f9f9;
+    }
+    
+    h1 {
+      color: #333;
+      text-align: center;
+    }
+    
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px 0;
+      transition: background-color 0.3s;
+    }
+    
+    button:hover {
+      background-color: #45a049;
+    }
+    
+    button.delete-btn {
+      background-color: #f44336;
+    }
+    
+    button.delete-btn:hover {
+      background-color: #d32f2f;
+    }
+    
+    button.primary-btn {
+      background-color: #2196F3;
+    }
+    
+    button.primary-btn:hover {
+      background-color: #0b7dda;
+    }
+    
+    .form-container {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      display: none;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    
+    .form-container.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    
+    .input-group {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .input-group button {
+      min-width: 100px;
+    }
+    
+    .expense-item {
+      background-color: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 15px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .expense-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    }
+    
+    .expense-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .expense-title {
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .expense-amount {
+      color: #f44336;
+      font-weight: bold;
+    }
+    
+    .expense-date {
+      color: #666;
+      font-size: 0.9em;
+    }
+    
+    .empty-message {
+      text-align: center;
+      color: #888;
+      padding: 20px 0;
+    }
+    
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #333;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 100;
+    }
+    
+    .notification.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .quick-categories {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin: 10px 0;
+    }
+    
+    .quick-category {
+      background-color: #e0e0e0;
+      color: #333;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .quick-category:hover {
+      background-color: #d0d0d0;
+    }
+    
+    .manage-categories-btn {
+      font-size: 0.9em;
+      margin-left: 10px;
+      color: #2196F3;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    
+    .categories-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+    }
+    
+    .categories-modal.active {
+      display: flex;
+    }
+    
+    .modal-content {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .category-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .category-item:last-child {
+      border-bottom: none;
+    }
+    
+    .category-name {
+      flex-grow: 1;
+      margin-right: 10px;
+    }
+    
+    .delete-category {
+      color: #f44336;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>每日记账</h1>
+  
+  <button id="add-btn">+ 添加记录</button>
+  
+  <div id="form-container" class="form-container">
+    <h2>添加新记录</h2>
+    
+    <div class="input-group">
+      <input type="text" id="title-input" placeholder="消费名称" required>
+      <button id="add-category-btn" class="primary-btn">添加常用</button>
+    </div>
+    
+    <div class="quick-categories" id="quick-categories"></div>
+    <span class="manage-categories-btn" id="manage-categories-btn">管理常用消费</span>
+    
+    <input type="number" id="amount-input" placeholder="金额" step="0.01" required>
+    <input type="date" id="date-input" required>
+    <div style="display: flex; justify-content: space-between;">
+      <button id="cancel-btn">取消</button>
+      <button id="save-btn">保存记录</button>
+    </div>
+  </div>
+  
+  <h2>消费记录</h2>
+  <div id="expense-list"></div>
+  <div id="empty-message" class="empty-message">暂无记录</div>
+  
+  <div id="notification" class="notification"></div>
+  
+  <!-- 常用消费管理模态框 -->
+  <div id="categories-modal" class="categories-modal">
+    <div class="modal-content">
+      <h3>管理常用消费</h3>
+      <div class="input-group">
+        <input type="text" id="new-category-input" placeholder="输入新的消费类别">
+        <button id="create-category-btn">添加</button>
+      </div>
+      <div id="categories-list" class="categories-list"></div>
+      <button id="close-modal-btn">关闭</button>
+    </div>
+  </div>
+  
+  <script>
+    // 数据存储
+    let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+    let categories = JSON.parse(localStorage.getItem('categories')) || [];
+    
+    // DOM元素
+    const addBtn = document.getElementById('add-btn');
+    const formContainer = document.getElementById('form-container');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const saveBtn = document.getElementById('save-btn');
+    const titleInput = document.getElementById('title-input');
+    const amountInput = document.getElementById('amount-input');
+    const dateInput = document.getElementById('date-input');
+    const expenseList = document.getElementById('expense-list');
+    const emptyMessage = document.getElementById('empty-message');
+    const notification = document.getElementById('notification');
+    const addCategoryBtn = document.getElementById('add-category-btn');
+    const quickCategories = document.getElementById('quick-categories');
+    const manageCategoriesBtn = document.getElementById('manage-categories-btn');
+    const categoriesModal = document.getElementById('categories-modal');
+    const newCategoryInput = document.getElementById('new-category-input');
+    const createCategoryBtn = document.getElementById('create-category-btn');
+    const categoriesList = document.getElementById('categories-list');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    
+    // 设置默认日期为今天
+    dateInput.valueAsDate = new Date();
+    
+    // 显示表单
+    addBtn.addEventListener('click', () => {
+      formContainer.classList.add('active');
+      titleInput.focus();
+      renderQuickCategories();
+    });
+    
+    // 隐藏表单
+    cancelBtn.addEventListener('click', () => {
+      formContainer.classList.remove('active');
+      setTimeout(() => {
+        clearForm();
+      }, 300);
+    });
+    
+    // 添加常用消费
+    addCategoryBtn.addEventListener('click', () => {
+      const category = titleInput.value.trim();
+      if (!category) {
+        showNotification('请输入消费名称');
+        return;
+      }
+      
+      if (categories.includes(category)) {
+        showNotification('该类别已存在');
+        return;
+      }
+      
+      categories.push(category);
+      saveCategories();
+      renderQuickCategories();
+      showNotification('已添加到常用消费');
+    });
+    
+    // 管理常用消费
+    manageCategoriesBtn.addEventListener('click', () => {
+      categoriesModal.classList.add('active');
+      renderCategoriesList();
+      newCategoryInput.focus();
+    });
+    
+    // 关闭模态框
+    closeModalBtn.addEventListener('click', () => {
+      categoriesModal.classList.remove('active');
+    });
+    
+    // 创建新类别
+    createCategoryBtn.addEventListener('click', () => {
+      const category = newCategoryInput.value.trim();
+      if (!category) {
+        showNotification('请输入类别名称');
+        return;
+      }
+      
+      if (categories.includes(category)) {
+        showNotification('该类别已存在');
+        newCategoryInput.value = '';
+        newCategoryInput.focus();
+        return;
+      }
+      
+      categories.push(category);
+      saveCategories();
+      renderCategoriesList();
+      newCategoryInput.value = '';
+      newCategoryInput.focus();
+      showNotification('类别已添加');
+    });
+    
+    // 点击快速类别
+    quickCategories.addEventListener('click', (e) => {
+      if (e.target.classList.contains('quick-category')) {
+        titleInput.value = e.target.textContent;
+        amountInput.focus();
+      }
+    });
+    
+    // 删除类别
+    categoriesList.addEventListener('click', (e) => {
+      if (e.target.classList.contains('delete-category')) {
+        const category = e.target.dataset.category;
+        categories = categories.filter(c => c !== category);
+        saveCategories();
+        renderCategoriesList();
+        renderQuickCategories();
+        showNotification('类别已删除');
+      }
+    });
+    
+    // 保存记录
+    saveBtn.addEventListener('click', () => {
+      const title = titleInput.value.trim();
+      const amount = parseFloat(amountInput.value);
+      const date = dateInput.value;
+      
+      // 简单验证
+      if (!title) {
+        showNotification('请输入消费名称');
+        return;
+      }
+      
+      if (isNaN(amount) || amount <= 0) {
+        showNotification('请输入有效的金额');
+        return;
+      }
+      
+      if (!date) {
+        showNotification('请选择日期');
+        return;
+      }
+      
+      // 创建新记录
+      const newExpense = {
+        id: Date.now().toString(),
+        title,
+        amount,
+        date
+      };
+      
+      // 添加到列表并保存
+      expenses.unshift(newExpense); // 添加到开头
+      saveExpenses();
+      renderExpenses();
+      clearForm();
+      formContainer.classList.remove('active');
+      showNotification('记录已添加');
+    });
+    
+    // 删除记录
+    function deleteExpense(id) {
+      if (confirm('确定要删除这条记录吗？')) {
+        expenses = expenses.filter(expense => expense.id !== id);
+        saveExpenses();
+        renderExpenses();
+        showNotification('记录已删除');
+      }
+    }
+    
+    // 保存到本地存储
+    function saveExpenses() {
+      localStorage.setItem('expenses', JSON.stringify(expenses));
+    }
+    
+    // 保存常用消费
+    function saveCategories() {
+      localStorage.setItem('categories', JSON.stringify(categories));
+    }
+    
+    // 渲染所有记录
+    function renderExpenses() {
+      if (expenses.length === 0) {
+        emptyMessage.style.display = 'block';
+        expenseList.innerHTML = '';
+        return;
+      }
+      
+      emptyMessage.style.display = 'none';
+      expenseList.innerHTML = '';
+      
+      expenses.forEach(expense => {
+        const item = document.createElement('div');
+        item.className = 'expense-item';
+        item.innerHTML = `
+          <div class="expense-header">
+            <div class="expense-title">${expense.title}</div>
+            <div class="expense-amount">¥${expense.amount.toFixed(2)}</div>
+          </div>
+          <div class="expense-date">${formatDate(expense.date)}</div>
+          <button class="delete-btn" onclick="deleteExpense('${expense.id}')">删除</button>
+        `;
+        expenseList.appendChild(item);
+      });
+    }
+    
+    // 渲染快速类别
+    function renderQuickCategories() {
+      quickCategories.innerHTML = '';
+      
+      if (categories.length === 0) {
+        quickCategories.innerHTML = '<span style="color: #888; font-size: 0.9em;">暂无常用消费，输入后可添加</span>';
+        return;
+      }
+      
+      categories.forEach(category => {
+        const div = document.createElement('div');
+        div.className = 'quick-category';
+        div.textContent = category;
+        quickCategories.appendChild(div);
+      });
+    }
+    
+    // 渲染类别列表
+    function renderCategoriesList() {
+      categoriesList.innerHTML = '';
+      
+      if (categories.length === 0) {
+        categoriesList.innerHTML = '<p style="color: #888; text-align: center;">暂无类别</p>';
+        return;
+      }
+      
+      categories.forEach(category => {
+        const div = document.createElement('div');
+        div.className = 'category-item';
+        div.innerHTML = `
+          <span class="category-name">${category}</span>
+          <span class="delete-category" data-category="${category}">删除</span>
+        `;
+        categoriesList.appendChild(div);
+      });
+    }
+    
+    // 格式化日期
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+    }
+    
+    // 清空表单
+    function clearForm() {
+      titleInput.value = '';
+      amountInput.value = '';
+      dateInput.valueAsDate = new Date();
+    }
+    
+    // 显示通知
+    function showNotification(message) {
+      notification.textContent = message;
+      notification.classList.add('active');
+      
+      setTimeout(() => {
+        notification.classList.remove('active');
+      }, 3000);
+    }
+    
+    // 初始化页面
+    renderExpenses();
+    renderQuickCategories();
+  </script>
+</body>
+</html>    
